@@ -1,0 +1,13 @@
+C:\Users\fduval\Documents\GitHub\FeriasOptimizer2\FeriasOptimizer\bin\Debug\FeriasOptimizer.exe
+C:\Users\fduval\Documents\GitHub\FeriasOptimizer2\FeriasOptimizer\bin\Debug\FeriasOptimizer.pdb
+C:\Users\fduval\Documents\GitHub\FeriasOptimizer2\FeriasOptimizer\bin\Debug\HtmlAgilityPack.dll
+C:\Users\fduval\Documents\GitHub\FeriasOptimizer2\FeriasOptimizer\bin\Debug\HtmlAgilityPack.pdb
+C:\Users\fduval\Documents\GitHub\FeriasOptimizer2\FeriasOptimizer\bin\Debug\HtmlAgilityPack.xml
+C:\Users\fduval\Documents\GitHub\FeriasOptimizer2\FeriasOptimizer\obj\Debug\FeriasOptimizer.csproj.AssemblyReference.cache
+C:\Users\fduval\Documents\GitHub\FeriasOptimizer2\FeriasOptimizer\obj\Debug\FeriasOptimizer.Form1.resources
+C:\Users\fduval\Documents\GitHub\FeriasOptimizer2\FeriasOptimizer\obj\Debug\FeriasOptimizer.Properties.Resources.resources
+C:\Users\fduval\Documents\GitHub\FeriasOptimizer2\FeriasOptimizer\obj\Debug\FeriasOptimizer.csproj.GenerateResource.cache
+C:\Users\fduval\Documents\GitHub\FeriasOptimizer2\FeriasOptimizer\obj\Debug\FeriasOptimizer.csproj.CoreCompileInputs.cache
+C:\Users\fduval\Documents\GitHub\FeriasOptimizer2\FeriasOptimizer\obj\Debug\FeriasOptimizer.csproj.CopyComplete
+C:\Users\fduval\Documents\GitHub\FeriasOptimizer2\FeriasOptimizer\obj\Debug\FeriasOptimizer.exe
+C:\Users\fduval\Documents\GitHub\FeriasOptimizer2\FeriasOptimizer\obj\Debug\FeriasOptimizer.pdb

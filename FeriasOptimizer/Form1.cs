@@ -7,6 +7,7 @@ using System.Data;
 using System.Drawing;
 using System.Globalization;
 using System.Linq;
+using System.Net;
 using System.Text;
 using System.Windows.Forms;
 
@@ -34,15 +35,17 @@ namespace FeriasOptimizer
         private int diasDeFerias = 30;
         private int anoAtual = DateTime.Now.Year;
 
-        private List<DateTime> outros = new List<DateTime>();
-        private List<DateTime> nacionais = new List<DateTime>();
+        private Dictionary<DateTime,String> outros = new Dictionary<DateTime, String>();
+        private Dictionary<DateTime, String> nacionais = new Dictionary<DateTime, String>();
 
         private Dictionary<DateTime,int> optimus;
+        private List<int> diasHO = new List<int>();
 
 
         public Form1()
         {
             InitializeComponent();
+            label8.Text = "";
 
             //feriados $nacionais
             getNationalHolidays(anoAtual);
@@ -51,6 +54,7 @@ namespace FeriasOptimizer
             //feriados estaduais
             getStateHolidays(anoAtual);
             getStateHolidays(anoAtual+1);
+
         }
 
         private void radioButton3_CheckedChanged(object sender, EventArgs e)
@@ -102,6 +106,20 @@ namespace FeriasOptimizer
                 numericUpDown1.Value = 20;
             else
                 numericUpDown1.Value = 30;
+        }
+
+        private void monthCalendar1_MouseHover(object sender, EventArgs e)
+        {
+            /*
+            ToolTip toolTipInfo = new ToolTip();
+            String nome = "";
+            if (nacionais.Keys.Contains(monthCalendar1.SelectionStart.Date))
+                nome = nacionais[monthCalendar1.SelectionStart.Date];
+            else if (outros.Keys.Contains(monthCalendar1.SelectionStart.Date))
+                nome = outros[monthCalendar1.SelectionStart.Date];
+
+            toolTipInfo.SetToolTip(monthCalendar1, nome);
+            */
         }
 
         private void button1_Click(object sender, EventArgs e)
@@ -157,13 +175,21 @@ namespace FeriasOptimizer
                 if (MessageBox.Show("Tem certeza que deseja marcar férias próximas do balanço anual?", "Pense bem", MessageBoxButtons.YesNo) == DialogResult.No)
                     return;
             }
+            inDecember = true;
 
+            diasHO.Clear();
+            for (int i=0; i < checkedListBox1.CheckedItems.Count; i++)
+            {
+                int item = Int32.Parse(checkedListBox1.CheckedItems[i].ToString().Remove(1,1));
+                diasHO.Add(item);
+            }
+        
             //Calculando melhor data do primeiro periodo
             DateTime inicio = dataInicio;
             int maxDias = 0, qtdDiasTotais = 0;
             optimus = new Dictionary<DateTime,int>();
             while (inicio < (dataFim.AddDays(-dias1))){
-                if (inicio.DayOfWeek == DayOfWeek.Sunday || inicio.DayOfWeek == DayOfWeek.Saturday || nacionais.Contains(inicio) || outros.Contains(inicio))
+                if (inicio.DayOfWeek == DayOfWeek.Sunday || inicio.DayOfWeek == DayOfWeek.Saturday || nacionais.Keys.Contains(inicio) || outros.Keys.Contains(inicio))
                 {
                     //nunca começar as ferias num domingo, sábado ou feriado
                 }
@@ -196,7 +222,7 @@ namespace FeriasOptimizer
                 qtdDiasTotais = 0;
                 optimus = new Dictionary<DateTime,int>();
                 while (inicio < (dataFim2.AddDays(-dias2))){
-                    if (inicio.DayOfWeek == DayOfWeek.Sunday || inicio.DayOfWeek == DayOfWeek.Saturday || nacionais.Contains(inicio) || outros.Contains(inicio))
+                    if (inicio.DayOfWeek == DayOfWeek.Sunday || inicio.DayOfWeek == DayOfWeek.Saturday || nacionais.Keys.Contains(inicio) || outros.Keys.Contains(inicio))
                     {
                         //nunca começar as ferias num domingo, sábado ou feriado
                     }
@@ -247,14 +273,17 @@ namespace FeriasOptimizer
         private void getStateHolidays(int year)
         {
             DateTime date;
-            date = new DateTime(year, 4, 23, 0, 0, 0);//São Jorge
-            outros.Add(date);
+            date = new DateTime(year, 4, 21, 0, 0, 0);
+            outros.Add(date,"Tiradentes");
             monthCalendar1.AddBoldedDate(date);
-            date = new DateTime(year, 11, 20, 0, 0, 0);//Zumbi
-            outros.Add(date);
+            date = new DateTime(year, 4, 23, 0, 0, 0);
+            outros.Add(date, "São Jorge");
             monthCalendar1.AddBoldedDate(date);
-            date = new DateTime(year, 12, 8, 0, 0, 0);//Nossa Senhora da Conceição
-            outros.Add(date);
+            date = new DateTime(year, 11, 20, 0, 0, 0);
+            outros.Add(date, "Zumbi");
+            monthCalendar1.AddBoldedDate(date);
+            date = new DateTime(year, 12, 8, 0, 0, 0);
+            outros.Add(date, "Nossa Senhora da Conceição");
             monthCalendar1.AddBoldedDate(date);
         }
 
@@ -268,25 +297,27 @@ namespace FeriasOptimizer
         {
             try
             {
+                ServicePointManager.Expect100Continue = true;
+                ServicePointManager.SecurityProtocol = SecurityProtocolType.Ssl3 | SecurityProtocolType.Tls | (SecurityProtocolType)0x300 | (SecurityProtocolType)0xc00; //os 2 ultimos sao TLS11 e TLS12
                 HtmlWeb web = new HtmlWeb();
                 HtmlAgilityPack.HtmlDocument doc = web.Load(String.Format("https://www.calendarr.com/brasil/feriados-{0}/", year));
 
                 int dia, mes, qtd;
                 string nomeDoFeriado;
                 DateTime date;
-                qtd = doc.DocumentNode.SelectNodes("//*[@id='main']/div[4]/div[3]/span").Count; //qtd de meses com feriados
+                qtd = doc.DocumentNode.SelectNodes("//*[@id='main']/div[3]/div[3]/span").Count; //qtd de meses com feriados
                 for (int i = 1; i <= qtd; i++)
                 {
-                    mes = DateTime.ParseExact(doc.DocumentNode.SelectSingleNode(String.Format("//*[@id='main']/div[4]/div[3]/span[{0}]", i)).InnerText, "MMMM", CultureInfo.CurrentCulture).Month;
-                    foreach (var node in doc.DocumentNode.SelectNodes(String.Format("//*[@id='main']/div[4]/div[3]/ul[{0}]/li",i))){
+                    mes = DateTime.ParseExact(doc.DocumentNode.SelectSingleNode(String.Format("//*[@id='main']/div[3]/div[3]/span[{0}]", i)).InnerText, "MMMM", CultureInfo.CurrentCulture).Month;
+                    foreach (var node in doc.DocumentNode.SelectNodes(String.Format("//*[@id='main']/div[3]/div[3]/ul[{0}]/li",i))){
                         dia = int.Parse(node.SelectSingleNode("div/span").InnerText);
                         nomeDoFeriado = node.SelectSingleNode("div[2]/a").InnerText;
                         date = new DateTime(year, mes, dia, 0, 0, 0);
-                        nacionais.Add(date); 
+                        nacionais.Add(date, nomeDoFeriado); 
                         monthCalendar1.AddBoldedDate(date);
                         if (nomeDoFeriado == "Carnaval")//adicionar 4ª feira de cinzas
                         {
-                            nacionais.Add(date.AddDays(1));
+                            nacionais.Add(date.AddDays(1), nomeDoFeriado);
                             monthCalendar1.AddBoldedDate(date.AddDays(1));
                         }
                     }
@@ -309,45 +340,75 @@ namespace FeriasOptimizer
 	        int dias = 0;
 	        while (true){
 		        data = data.AddDays(-1);
-		        if (data.DayOfWeek == DayOfWeek.Friday && nacionais.Contains(data.AddDays(-1))){ //feriado nacional na quinta enforca a sexta
-			        dias = dias + 2;
-			        data = data.AddDays(-1);
+                if (data.DayOfWeek == DayOfWeek.Friday && nacionais.Keys.Contains(data.AddDays(-1)))
+                { //feriado nacional na quinta enforca a sexta
+                    dias = dias + 2;
+                    data = data.AddDays(-1);
                 }
-		        else if (data.DayOfWeek == DayOfWeek.Tuesday && nacionais.Contains(data)){ //feriado nacional na terca enforca a segunda
-			        dias = dias + 2;
-			        data = data.AddDays(-1);
+                else if (data.DayOfWeek == DayOfWeek.Tuesday && nacionais.Keys.Contains(data))
+                { //feriado nacional na terca enforca a segunda
+                    dias = dias + 2;
+                    data = data.AddDays(-1);
                 }
-		        else if (data.DayOfWeek == DayOfWeek.Sunday || data.DayOfWeek == DayOfWeek.Saturday || outros.Contains(data) || nacionais.Contains(data)){
-			        dias = dias + 1;
+                else if (data.DayOfWeek == DayOfWeek.Sunday || data.DayOfWeek == DayOfWeek.Saturday || outros.Keys.Contains(data) || nacionais.Keys.Contains(data))
+                {
+                    dias = dias + 1;
                 }
-		        else
-			        break;
+                else if (hoDay(data))
+                {
+                    dias = dias + 1;
+                }
+                else
+                    break;
 	        }	
 	        return dias;
         }
 
         /// <summary>
-        /// Retorna quantos de feriado ou fds existem depois da data
-        /// Quando 3ª é um feriado nacional também é considerado a 2ª.
-        /// Quando 5ª é um feriado nacional também é considerado a 6ª.
+        /// Retorna true se for um dia de HO
         /// </summary>
         /// <param name="data"></param>
         /// <returns></returns>
-        private int daysAfter(DateTime data){
+        private bool hoDay(DateTime data)
+        {
+            for(int i=0; i < diasHO.Count; i++)
+            {
+                if ((data.DayOfWeek == DayOfWeek.Monday && diasHO[i] == 2) || 
+                    (data.DayOfWeek == DayOfWeek.Tuesday && diasHO[i] == 3) ||
+                    (data.DayOfWeek == DayOfWeek.Wednesday && diasHO[i] == 4) ||
+                    (data.DayOfWeek == DayOfWeek.Thursday && diasHO[i] == 5) ||
+                    (data.DayOfWeek == DayOfWeek.Friday && diasHO[i] == 6) )
+                    return true;
+            }
+            return false;
+        }
+
+            /// <summary>
+            /// Retorna quantos de feriado ou fds existem depois da data
+            /// Quando 3ª é um feriado nacional também é considerado a 2ª.
+            /// Quando 5ª é um feriado nacional também é considerado a 6ª.
+            /// </summary>
+            /// <param name="data"></param>
+            /// <returns></returns>
+            private int daysAfter(DateTime data){
 	        int dias = 0;
 	        while (true){
 		        data = data.AddDays(1);
-		        if (data.DayOfWeek == DayOfWeek.Thursday && nacionais.Contains(data)){ //feriado nacional na quinta enforca a sexta
+		        if (data.DayOfWeek == DayOfWeek.Thursday && nacionais.Keys.Contains(data)){ //feriado nacional na quinta enforca a sexta
 			        dias = dias + 2;
 			        data = data.AddDays(1);
                 }
-		        else if (data.DayOfWeek == DayOfWeek.Monday && nacionais.Contains(data.AddDays(1))){ //feriado nacional na terca enforca a segunda
+		        else if (data.DayOfWeek == DayOfWeek.Monday && nacionais.Keys.Contains(data.AddDays(1))){ //feriado nacional na terca enforca a segunda
 			        dias = dias + 2;
 			        data = data.AddDays(1);
                 }
-		        else if (data.DayOfWeek == DayOfWeek.Sunday || data.DayOfWeek == DayOfWeek.Saturday || outros.Contains(data) || nacionais.Contains(data))
+		        else if (data.DayOfWeek == DayOfWeek.Sunday || data.DayOfWeek == DayOfWeek.Saturday || outros.Keys.Contains(data) || nacionais.Keys.Contains(data))
 			        dias = dias + 1;
-		        else
+                else if (hoDay(data))
+                {
+                    dias = dias + 1;
+                }
+                else
 			        break;
             }	
 	        return dias;
@@ -382,6 +443,16 @@ namespace FeriasOptimizer
         private void dateTimePicker4_ValueChanged(object sender, EventArgs e)
         {
             dateTimePicker3.Value = dateTimePicker4.Value.AddDays((int)numericUpDown2.Value*3);
+        }
+
+        private void monthCalendar1_DateSelected(object sender, DateRangeEventArgs e)
+        {
+            String nome = "";
+            if (nacionais.Keys.Contains(monthCalendar1.SelectionStart.Date))
+                nome = nacionais[monthCalendar1.SelectionStart.Date];
+            else if (outros.Keys.Contains(monthCalendar1.SelectionStart.Date))
+                nome = outros[monthCalendar1.SelectionStart.Date];
+            label8.Text = nome;
         }
 
     }
